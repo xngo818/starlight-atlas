@@ -2,7 +2,7 @@
 const supabaseUrl = 'https://rbmacioczbhakjlbcinn.supabase.co';
 const supabaseKey = 'sb_publishable_f43s3f4cM-5iRNoq5fXBEg_YmlD4g0B';
 
-const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+const supabase = window.supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
 // ======================= Constellation Data =======================
 const constellationsData = {
@@ -80,7 +80,7 @@ async function register(email, password) {
         email: email,
         password: password,
         options: {
-            emailRedirectTo: `${window.location.origin}/login.html`
+            emailRedirectTo: `${window.location.origin}/index.html`
         }
     });
 
@@ -127,7 +127,7 @@ async function logout() {
     await supabase.auth.signOut();
     currentUser = null;
     localStorage.removeItem('starlight_currentUser');
-    window.location.href = "./login.html";
+    window.location.href = "./index.html";
 }
 
 function checkAutoLogin() {
@@ -629,63 +629,86 @@ function initAuth() {
     const loginForm = document.getElementById('login-form');
     const registerForm = document.getElementById('register-form');
     const loginBtn = document.getElementById('login-btn');
-    const registerBtn = document.getElementById('register-btn');
-    const loginMsg = document.getElementById('login-msg');
-    const regMsg = document.getElementById('reg-msg');
+    const registerBtn = document.getElementById('registerBtn');
+    const loginMsg = document.getElementById('login-message');
+    const regMsg = document.getElementById('reg-message');
 
-    if (!loginBtn || !registerBtn) {
-        console.error("找不到登录/注册按钮，请检查HTML");
-        return;
+    if (loginTab && registerTab && loginForm && registerForm) {
+        loginTab.addEventListener('click', () => {
+            loginTab.classList.add('active');
+            registerTab.classList.remove('active');
+            loginForm.classList.remove('hidden');
+            registerForm.classList.add('hidden');
+        });
+
+        registerTab.addEventListener('click', () => {
+            window.location.href = "./register.html";
+        });
     }
-    loginTab.addEventListener('click', () => {
-        loginTab.classList.add('active');
-        registerTab.classList.remove('active');
-        loginForm.classList.remove('hidden');
-        registerForm.classList.add('hidden');
-    });
-    registerTab.addEventListener('click', () => {
-        registerTab.classList.add('active');
-        loginTab.classList.remove('active');
-        registerForm.classList.remove('hidden');
-        loginForm.classList.add('hidden');
-    });
-    loginBtn.addEventListener('click', async () => {
-        const email = document.getElementById('login-username').value.trim();
-        const password = document.getElementById('login-password').value;
 
-        if (!email || !password) {
-            loginMsg.innerText = 'Please enter email and password';
-            return;
-        }
+    if (!loginBtn) {
+        console.error("找不到登录按钮，请检查HTML");
+    }
+    if (loginBtn) {
+        loginBtn.addEventListener('click', async () => {
+            const email = document.getElementById('login-username').value.trim();
+            const password = document.getElementById('login-password').value;
 
-        const result = await login(email, password);
+            if (!email || !password) {
+                loginMsg.innerText = 'Please enter email and password';
+                return;
+            }
 
-        if (result === 'success') {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                loginMsg.innerText = 'Please enter a valid email address';
+                return;
+            }
+
+            const result = await login(email, password);
+
+            if (result === 'success') {
+                window.location.href = "./index.html";
+            } else {
+                loginMsg.innerText = result;
+            }
+        });
+    }
+
+    if (registerBtn) {
+        registerBtn.addEventListener('click', async () => {
+            const email = document.getElementById('reg-username').value.trim();
+            const password = document.getElementById('reg-password').value;
+
+            if (!email || !password) {
+                regMsg.innerText = 'Please enter email and password';
+                return;
+            }
+
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                regMsg.innerText = 'Please enter a valid email address';
+                return;
+            }
+
+            const result = await register(email, password);
+
+            if (result === 'success') {
+                regMsg.innerText = 'Registration successful! Please check your email for verification.';
+                document.getElementById('reg-username').value = '';
+                document.getElementById('reg-password').value = '';
+            } else {
+                regMsg.innerText = result;
+            }
+        });
+    }
+
+    const goLoginBtn = document.getElementById('goLogin');
+    if (goLoginBtn) {
+        goLoginBtn.addEventListener('click', () => {
             window.location.href = "./index.html";
-        } else {
-            loginMsg.innerText = result;
-        }
-    });
-
-    registerBtn.addEventListener('click', async () => {
-        const email = document.getElementById('reg-username').value.trim();
-        const password = document.getElementById('reg-password').value;
-
-        if (!email || !password) {
-            regMsg.innerText = 'Please enter email and password';
-            return;
-        }
-
-        const result = await register(email, password);
-
-        if (result === 'success') {
-            regMsg.innerText = 'Registration successful! Please check your email for verification.';
-            document.getElementById('reg-username').value = '';
-            document.getElementById('reg-password').value = '';
-        } else {
-            regMsg.innerText = result;
-        }
-    });
+        });
+    }
 }
 
 // ======================= Animation Utilities =======================
@@ -711,7 +734,6 @@ async function checkAuthStatus() {
         return true;
     }
 
-    window.location.href = "./login.html";
     return false;
 }
 
@@ -733,4 +755,6 @@ async function init() {
     }
 }
 
-init();
+document.addEventListener('DOMContentLoaded', () => {
+    init();
+});

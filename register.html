@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Starlight Atlas</title>
+    <title>Register</title>
     <link rel="stylesheet" href="./style.css">
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.min.js"></script>
@@ -83,21 +83,16 @@
             <div class="auth-box">
                 <h1 class="title">✨ Starlight Atlas</h1>
                 <div class="auth-tabs">
-                    <button id="login-tab" class="auth-tab active">Login</button>
-                    <button id="register-tab" class="auth-tab">Register</button>
-                </div>
-                <!-- Login Form -->
-                <div id="login-form" class="auth-form">
-                    <input type="text" id="login-username" placeholder="Email" autocomplete="off">
-                    <input type="password" id="login-password" placeholder="Password">
-                    <button id="login-btn" class="auth-submit">Login</button>
-                    <div id="login-message" class="auth-message"></div>
+                    <button id="login-tab" class="auth-tab" style="display: none;">Login</button>
+                    <button id="register-tab" class="auth-tab active">Register</button>
                 </div>
                 <!-- Register Form -->
-                <div id="register-form" class="auth-form hidden">
+                <div id="register-form" class="auth-form">
                     <input type="text" id="reg-username" placeholder="Email" autocomplete="off">
                     <input type="password" id="reg-password" placeholder="Password">
-                    <button id="register-btn" class="auth-submit">Register</button>
+                    <button id="registerBtn" class="auth-submit">Register</button>
+                    <div id="goLogin" class="auth-submit"
+                        style="background: transparent; color: #d4af6a; border: 1px solid #d4af6a;">Back to Login</div>
                     <div id="reg-message" class="auth-message"></div>
                 </div>
             </div>
@@ -165,6 +160,38 @@
 
     </div>
     <script src="./script.js"></script>
+    <script>
+        document.getElementById('goLogin').addEventListener('click', () => {
+            window.location.href = "./index.html";
+        });
+
+        document.getElementById('registerBtn').addEventListener('click', async () => {
+            const email = document.getElementById('reg-username').value.trim();
+            const password = document.getElementById('reg-password').value;
+            const msgDiv = document.getElementById('reg-message');
+
+            if (!email || !password) {
+                msgDiv.innerText = 'Please enter email and password';
+                return;
+            }
+
+            const { data, error } = await window.supabase.auth.signUp({
+                email: email,
+                password: password,
+                options: {
+                    emailRedirectTo: `${window.location.origin}/index.html`
+                }
+            });
+
+            if (error) {
+                msgDiv.innerText = error.message;
+            } else if (data.user) {
+                msgDiv.innerText = 'Registration successful! Please check your email for verification.';
+                document.getElementById('reg-username').value = '';
+                document.getElementById('reg-password').value = '';
+            }
+        });
+    </script>
 </body>
 
 </html>
