@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Starlight Atlas</title>
+    <link rel="stylesheet" href="./style.css">
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+</head>
+
+<body>
+    <!-- 星座装饰 SVG -->
+    <svg class="constellation-decoration" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice">
+        <!-- 星座线 -->
+        <g class="constellation-lines">
+            <path d="M 100 200 Q 150 180 200 220 Q 250 260 280 220 Q 320 180 380 200" fill="none"
+                stroke="rgba(212, 175, 106, 0.3)" stroke-width="1" class="line-draw" />
+            <path d="M 200 220 Q 220 280 180 320 Q 140 360 100 340" fill="none" stroke="rgba(212, 175, 106, 0.25)"
+                stroke-width="1" class="line-draw" style="animation-delay: 0.5s" />
+            <path d="M 500 150 Q 550 120 600 160 Q 650 200 700 150 Q 750 100 800 140" fill="none"
+                stroke="rgba(212, 175, 106, 0.25)" stroke-width="1" class="line-draw" style="animation-delay: 1s" />
+            <path d="M 900 300 Q 950 280 1000 320 Q 1050 360 1100 320" fill="none" stroke="rgba(212, 175, 106, 0.2)"
+                stroke-width="1" class="line-draw" style="animation-delay: 1.5s" />
+            <path d="M 150 500 Q 200 480 250 520 Q 300 560 350 520" fill="none" stroke="rgba(212, 175, 106, 0.2)"
+                stroke-width="1" class="line-draw" style="animation-delay: 2s" />
+            <path d="M 700 550 Q 750 530 800 570 Q 850 610 900 570 Q 950 530 1000 560" fill="none"
+                stroke="rgba(212, 175, 106, 0.22)" stroke-width="1" class="line-draw" style="animation-delay: 2.5s" />
+        </g>
+        <!-- 星星点 -->
+        <g class="constellation-stars">
+            <circle cx="100" cy="200" r="3" fill="rgba(255, 240, 192, 0.6)" class="star-pulse" />
+            <circle cx="200" cy="220" r="4" fill="rgba(255, 245, 200, 0.7)" class="star-pulse"
+                style="animation-delay: 0.3s" />
+            <circle cx="280" cy="220" r="3" fill="rgba(255, 240, 192, 0.5)" class="star-pulse"
+                style="animation-delay: 0.6s" />
+            <circle cx="380" cy="200" r="3.5" fill="rgba(255, 245, 200, 0.65)" class="star-pulse"
+                style="animation-delay: 0.9s" />
+            <circle cx="180" cy="320" r="2.5" fill="rgba(255, 240, 192, 0.5)" class="star-pulse"
+                style="animation-delay: 1.2s" />
+            <circle cx="100" cy="340" r="3" fill="rgba(255, 240, 192, 0.55)" class="star-pulse"
+                style="animation-delay: 1.5s" />
+
+            <circle cx="500" cy="150" r="3" fill="rgba(255, 240, 192, 0.55)" class="star-pulse"
+                style="animation-delay: 0.2s" />
+            <circle cx="600" cy="160" r="4" fill="rgba(255, 245, 200, 0.7)" class="star-pulse"
+                style="animation-delay: 0.5s" />
+            <circle cx="700" cy="150" r="3" fill="rgba(255, 240, 192, 0.6)" class="star-pulse"
+                style="animation-delay: 0.8s" />
+            <circle cx="800" cy="140" r="3.5" fill="rgba(255, 245, 200, 0.65)" class="star-pulse"
+                style="animation-delay: 1.1s" />
+
+            <circle cx="900" cy="300" r="3" fill="rgba(255, 240, 192, 0.5)" class="star-pulse"
+                style="animation-delay: 0.4s" />
+            <circle cx="1000" cy="320" r="3.5" fill="rgba(255, 245, 200, 0.6)" class="star-pulse"
+                style="animation-delay: 0.7s" />
+            <circle cx="1100" cy="320" r="3" fill="rgba(255, 240, 192, 0.55)" class="star-pulse"
+                style="animation-delay: 1s" />
+
+            <circle cx="150" cy="500" r="3" fill="rgba(255, 240, 192, 0.5)" class="star-pulse"
+                style="animation-delay: 0.3s" />
+            <circle cx="250" cy="520" r="3.5" fill="rgba(255, 245, 200, 0.6)" class="star-pulse"
+                style="animation-delay: 0.6s" />
+            <circle cx="350" cy="520" r="3" fill="rgba(255, 240, 192, 0.55)" class="star-pulse"
+                style="animation-delay: 0.9s" />
+
+            <circle cx="700" cy="550" r="3" fill="rgba(255, 240, 192, 0.55)" class="star-pulse"
+                style="animation-delay: 0.2s" />
+            <circle cx="800" cy="570" r="4" fill="rgba(255, 245, 200, 0.7)" class="star-pulse"
+                style="animation-delay: 0.5s" />
+            <circle cx="900" cy="570" r="3" fill="rgba(255, 240, 192, 0.6)" class="star-pulse"
+                style="animation-delay: 0.8s" />
+            <circle cx="1000" cy="560" r="3.5" fill="rgba(255, 245, 200, 0.65)" class="star-pulse"
+                style="animation-delay: 1.1s" />
+        </g>
+    </svg>
+
+    <div class="app-container">
+
+        <!-- ========= View 0: Login/Register Page ========= -->
+        <section id="auth-view" class="view">
+            <div class="auth-box">
+                <h1 class="title">✨ Starlight Atlas</h1>
+                <div class="auth-tabs">
+                    <button id="login-tab" class="auth-tab active">Login</button>
+                    <button id="register-tab" class="auth-tab">Register</button>
+                </div>
+                <!-- Login Form -->
+                <div id="login-form" class="auth-form">
+                    <input type="text" id="login-username" placeholder="Username" autocomplete="off">
+                    <input type="password" id="login-password" placeholder="Password">
+                    <button id="login-btn" class="auth-submit">Login</button>
+                    <div id="login-message" class="auth-message"></div>
+                </div>
+                <!-- Register Form -->
+                <div id="register-form" class="auth-form hidden">
+                    <input type="text" id="reg-username" placeholder="Username" autocomplete="off">
+                    <input type="password" id="reg-password" placeholder="Password">
+                    <button id="register-btn" class="auth-submit">Register</button>
+                    <div id="reg-message" class="auth-message"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========= View 1: Constellation Selection (Initially Hidden) ========= -->
+        <section id="constellation-selector" class="view" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h1 class="title">📜 Starlight Atlas</h1>
+                <button id="logout-btn" class="back-btn" style="background:none;">🚪 Logout</button>
+            </div>
+            <div class="constellation-grid">
+                <div class="constellation-card" data-constellation="cygnus">
+                    <div class="card-inner">
+                        <h2>Cygnus</h2>
+                        <p>Swan</p>
+                        <small>7 stars · Freedom & Persistence</small>
+                    </div>
+                </div>
+                <div class="constellation-card" data-constellation="cassiopeia">
+                    <div class="card-inner">
+                        <h2>Cassiopeia</h2>
+                        <p>Queen</p>
+                        <small>5 stars · Grace & Perseverance</small>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========= View 2: Observation Page (Initially Hidden) ========= -->
+        <section id="observation-view" class="view" style="display: none;">
+            <header class="obs-header">
+                <button id="back-to-selector" class="back-btn">← Back to Atlas</button>
+                <h2 id="current-constellation-name">Cygnus</h2>
+            </header>
+
+            <div class="star-chart" id="star-chart"></div>
+
+            <div class="action-bar">
+                <button id="checkin-btn" class="action-btn">✨ Check-in Today</button>
+                <button id="notes-btn" class="action-btn">📝 Notes</button>
+                <button id="share-btn" class="action-btn">📸 Share</button>
+                <button id="certificate-btn" class="action-btn">🏆 Certificate</button>
+            </div>
+
+            <aside id="notes-sidebar" class="notes-sidebar">
+                <div class="sidebar-header">
+                    <h3>Starlight Notes</h3>
+                    <button id="close-sidebar" class="close-btn">✕</button>
+                </div>
+                <div id="star-selector" class="star-selector">
+                    <label>Select Star:</label>
+                    <select id="star-select">
+                        <option value="-1">Constellation Global Note</option>
+                    </select>
+                </div>
+                <textarea id="note-content" placeholder="Write your thoughts here..."></textarea>
+                <button id="save-note" class="save-note-btn">Save Note</button>
+                <div id="notes-history" class="notes-history">
+                    <h4>Notes History</h4>
+                    <div id="history-list" class="history-list"></div>
+                </div>
+            </aside>
+        </section>
+
+    </div>
+    <script src="./script.js"></script>
+</body>
+
+</html>
