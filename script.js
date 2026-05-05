@@ -1,3 +1,9 @@
+// ======================= Supabase Initialization =======================
+const supabaseUrl = 'https://rbmacioczbhakjlbcinn.supabase.co';
+const supabaseKey = 'sb_publishable_f43s3f4cM-5iRNoq5fXBEg_YmlD4g0B';
+
+const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
 // ======================= Constellation Data =======================
 const constellationsData = {
     cygnus: {
@@ -67,29 +73,58 @@ function initUserData(username) {
     saveUsers(users);
 }
 
-function register(username, password) {
-    if (!username || !password) return 'Username/Password cannot be empty';
-    const users = getUsers();
-    if (users[username]) return 'Username already exists';
-    users[username] = {
+async function register(email, password) {
+    if (!email || !password) return 'Email/Password cannot be empty';
+
+    const { data, error } = await supabase.auth.signUp({
+        email: email,
         password: password,
-        data: {}
-    };
-    saveUsers(users);
-    initUserData(username);
-    return 'success';
+        options: {
+            emailRedirectTo: `${window.location.origin}/login.html`
+        }
+    });
+
+    if (error) {
+        return error.message;
+    }
+
+    if (data.user) {
+        const users = getUsers();
+        if (!users[email]) {
+            users[email] = {
+                password: password,
+                data: {}
+            };
+            saveUsers(users);
+            initUserData(email);
+        }
+        return 'success';
+    }
+
+    return 'Registration failed';
 }
 
-function login(username, password) {
-    const users = getUsers();
-    if (!users[username]) return 'User does not exist';
-    if (users[username].password !== password) return 'Incorrect password';
-    currentUser = username;
-    localStorage.setItem('starlight_currentUser', username);
-    return 'success';
+async function login(email, password) {
+    const { data, error } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: password
+    });
+
+    if (error) {
+        return error.message;
+    }
+
+    if (data.user) {
+        currentUser = data.user.email;
+        localStorage.setItem('starlight_currentUser', data.user.email);
+        return 'success';
+    }
+
+    return 'Login failed';
 }
 
-function logout() {
+async function logout() {
+    await supabase.auth.signOut();
     currentUser = null;
     localStorage.removeItem('starlight_currentUser');
     window.location.href = "./login.html";
@@ -99,189 +134,182 @@ function checkAutoLogin() {
     const savedUser = localStorage.getItem('starlight_currentUser');
     if (savedUser && getUsers()[savedUser]) {
         currentUser = savedUser;
-        initUserData(currentUser);
         return true;
     }
     return false;
 }
 
-// ======================= Data Read/Write (User-based) =======================
-function getUserDataForConstellation(constId) {
+function getUserDataForConstellation(constellationId) {
     if (!currentUser) return null;
     const users = getUsers();
-    return users[currentUser].data[constId];
+    if (!users[currentUser] || !users[currentUser].data) {
+        initUserData(currentUser);
+        return getUserDataForConstellation(constellationId);
+    }
+    return users[currentUser].data[constellationId] || null;
 }
 
-function saveLitStatusForConstellation(constId, status) {
+function getLitStatusForConstellation(constellationId) {
+    const data = getUserDataForConstellation(constellationId);
+    if (!data) return new Array(constellationsData[constellationId].starCount).fill(false);
+    return data.litStatus || new Array(constellationsData[constellationId].starCount).fill(false);
+}
+
+function saveLitStatusForConstellation(constellationId, status) {
     if (!currentUser) return;
     const users = getUsers();
-    users[currentUser].data[constId].litStatus = status;
+    if (!users[currentUser].data[constellationId]) {
+        users[currentUser].data[constellationId] = {};
+    }
+    users[currentUser].data[constellationId].litStatus = status;
     saveUsers(users);
 }
 
-function getLitStatus(constId) {
-    const data = getUserDataForConstellation(constId);
-    return data ? data.litStatus : new Array(constellationsData[constId].starCount).fill(false);
-}
-
-function setLastCheckin(constId, dateStr) {
-    const users = getUsers();
-    users[currentUser].data[constId].lastCheckin = dateStr;
-    saveUsers(users);
-}
-
-function getLastCheckin(constId) {
-    const data = getUserDataForConstellation(constId);
+function getLastCheckin(constellationId) {
+    const data = getUserDataForConstellation(constellationId);
     return data ? data.lastCheckin : '';
 }
 
-function setNoteForConstellation(constId, note) {
+function setLastCheckin(constellationId, dateStr) {
+    if (!currentUser) return;
     const users = getUsers();
-    users[currentUser].data[constId].notes = note;
+    if (!users[currentUser].data[constellationId]) {
+        users[currentUser].data[constellationId] = {};
+    }
+    users[currentUser].data[constellationId].lastCheckin = dateStr;
     saveUsers(users);
 }
 
-function getNoteForConstellation(constId) {
-    const data = getUserDataForConstellation(constId);
+function getNoteForConstellation(constellationId) {
+    const data = getUserDataForConstellation(constellationId);
     return data ? data.notes : '';
 }
 
-function getStarNote(constId, starIndex) {
-    const data = getUserDataForConstellation(constId);
-    return data && data.starNotes ? data.starNotes[starIndex] : '';
-}
-
-function setStarNote(constId, starIndex, note) {
+function setNoteForConstellation(constellationId, note) {
     if (!currentUser) return;
     const users = getUsers();
-    if (!users[currentUser].data[constId].starNotes) {
-        users[currentUser].data[constId].starNotes = new Array(constellationsData[constId].starCount).fill('');
+    if (!users[currentUser].data[constellationId]) {
+        users[currentUser].data[constellationId] = {};
     }
-    users[currentUser].data[constId].starNotes[starIndex] = note;
+    users[currentUser].data[constellationId].notes = note;
     saveUsers(users);
 }
 
-// ======================= View Switching =======================
-function showView(viewId) {
-    const views = document.querySelectorAll('.view');
-    views.forEach(view => {
-        view.style.display = 'none';
-    });
-    const target = document.getElementById(viewId);
-    if (target) target.style.display = 'block';
+function getStarNote(constellationId, starIndex) {
+    const data = getUserDataForConstellation(constellationId);
+    if (!data || !data.starNotes) return '';
+    return data.starNotes[starIndex] || '';
 }
 
-// ======================= Load Constellation Data =======================
-function loadConstellationData(constellationId) {
-    const data = constellationsData[constellationId];
-    if (!data) return;
-
-    document.getElementById('current-constellation-name').innerText = data.name;
-
-    const container = document.getElementById('star-chart');
-    container.innerHTML = '';
-    starElements = [];
-
-    for (let i = 0; i < data.starCount; i++) {
-        const star = document.createElement('span');
-        star.className = 'star';
-        star.setAttribute('data-star-index', i);
-        star.style.left = data.positions[i].left;
-        star.style.top = data.positions[i].top;
-        container.appendChild(star);
-        starElements.push(star);
+function setStarNote(constellationId, starIndex, note) {
+    if (!currentUser) return;
+    const users = getUsers();
+    if (!users[currentUser].data[constellationId]) {
+        users[currentUser].data[constellationId] = {};
     }
-
-    // 绘制星座连线
-    drawConstellationLines(data);
-
-    litStatus = getLitStatus(constellationId).slice();
-
-    litStatus.forEach((isLit, idx) => {
-        if (isLit && starElements[idx]) starElements[idx].classList.add('lit');
-        else if (starElements[idx]) starElements[idx].classList.remove('lit');
-    });
-
-    // 检查是否所有星星都已点亮
-    checkAllStarsLit();
-}
-
-function drawConstellationLines(data) {
-    const container = document.getElementById('star-chart');
-    if (!data.connections) return;
-
-    data.connections.forEach((connection, index) => {
-        const [startIndex, endIndex] = connection;
-        const startStar = starElements[startIndex];
-        const endStar = starElements[endIndex];
-
-        if (startStar && endStar) {
-            const line = document.createElement('div');
-            line.className = 'constellation-line';
-            line.id = `line-${index}`;
-
-            const startRect = startStar.getBoundingClientRect();
-            const endRect = endStar.getBoundingClientRect();
-            const containerRect = container.getBoundingClientRect();
-
-            const startX = startRect.left - containerRect.left + startRect.width / 2;
-            const startY = startRect.top - containerRect.top + startRect.height / 2;
-            const endX = endRect.left - containerRect.left + endRect.width / 2;
-            const endY = endRect.top - containerRect.top + endRect.height / 2;
-
-            const length = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2));
-            const angle = Math.atan2(endY - startY, endX - startX) * 180 / Math.PI;
-
-            line.style.width = `${length}px`;
-            line.style.height = '2px';
-            line.style.left = `${startX}px`;
-            line.style.top = `${startY}px`;
-            line.style.transformOrigin = '0 0';
-            line.style.transform = `rotate(${angle}deg)`;
-
-            container.appendChild(line);
-        }
-    });
-}
-
-function checkAllStarsLit() {
-    const allLit = litStatus.every(status => status === true);
-    if (allLit) {
-        // 显示星座连线
-        const lines = document.querySelectorAll('.constellation-line');
-        lines.forEach((line, index) => {
-            setTimeout(() => {
-                line.classList.add('visible');
-            }, index * 200);
-        });
-
-        // 显示星座图片
-        setTimeout(() => {
-            const container = document.getElementById('star-chart');
-            const image = document.createElement('div');
-            image.className = 'constellation-image';
-            // 这里可以根据星座ID设置不同的图片
-            // image.style.backgroundImage = `url('${currentConstellation}-constellation.png')`;
-            container.appendChild(image);
-
-            setTimeout(() => {
-                image.classList.add('visible');
-            }, 500);
-        }, 1500);
+    if (!users[currentUser].data[constellationId].starNotes) {
+        users[currentUser].data[constellationId].starNotes = new Array(constellationsData[constellationId].starCount).fill('');
     }
+    users[currentUser].data[constellationId].starNotes[starIndex] = note;
+    saveUsers(users);
 }
 
-// ======================= Check-in Logic =======================
+// ======================= Date Utilities =======================
 function getTodayStr() {
     const today = new Date();
     return `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
 }
 
 function hasCheckedInToday() {
-    const last = getLastCheckin(currentConstellation);
-    return last === getTodayStr();
+    const lastCheckin = getLastCheckin(currentConstellation);
+    return lastCheckin === getTodayStr();
 }
 
+// ======================= Star Chart Rendering =======================
+function loadConstellationData(constellationId) {
+    const container = document.getElementById('star-chart');
+    if (!container) return;
+
+    container.innerHTML = '';
+    starElements = [];
+
+    const data = constellationsData[constellationId];
+    if (!data) return;
+
+    litStatus = getLitStatusForConstellation(constellationId);
+
+    data.positions.forEach((pos, index) => {
+        const star = document.createElement('div');
+        star.className = `star ${litStatus[index] ? 'lit' : ''}`;
+        star.style.left = pos.left;
+        star.style.top = pos.top;
+        star.setAttribute('data-index', index);
+        container.appendChild(star);
+        starElements.push(star);
+    });
+
+    // Draw constellation lines if all stars are lit
+    if (litStatus.every(s => s === true)) {
+        drawConstellationLines(data);
+    }
+
+    updateProgress();
+}
+
+function drawConstellationLines(data) {
+    const container = document.getElementById('star-chart');
+    if (!container) return;
+
+    data.connections.forEach((conn, index) => {
+        const star1 = starElements[conn[0]];
+        const star2 = starElements[conn[1]];
+        if (!star1 || !star2) return;
+
+        const rect1 = star1.getBoundingClientRect();
+        const rect2 = star2.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+
+        const x1 = rect1.left - containerRect.left + rect1.width / 2;
+        const y1 = rect1.top - containerRect.top + rect1.height / 2;
+        const x2 = rect2.left - containerRect.left + rect2.width / 2;
+        const y2 = rect2.top - containerRect.top + rect2.height / 2;
+
+        const line = document.createElement('div');
+        line.className = 'constellation-line';
+        line.style.setProperty('--x1', `${x1}px`);
+        line.style.setProperty('--x2', `${x2}px`);
+        line.style.setProperty('--y1', `${y1}px`);
+        line.style.setProperty('--y2', `${y2}px`);
+
+        setTimeout(() => {
+            line.classList.add('visible');
+        }, index * 200);
+
+        container.appendChild(line);
+    });
+
+    setTimeout(() => {
+        const container = document.getElementById('star-chart');
+        const image = document.createElement('div');
+        image.className = 'constellation-image';
+        container.appendChild(image);
+
+        setTimeout(() => {
+            image.classList.add('visible');
+        }, 100);
+    }, data.connections.length * 200 + 300);
+}
+
+function updateProgress() {
+    const progress = document.getElementById('progress');
+    const litCount = litStatus.filter(s => s === true).length;
+    const total = litStatus.length;
+    if (progress) {
+        progress.innerText = `${litCount}/${total}`;
+    }
+}
+
+// ======================= Check-in Function =======================
 function markCheckinToday() {
     setLastCheckin(currentConstellation, getTodayStr());
 }
@@ -307,29 +335,28 @@ function checkIn() {
     markCheckinToday();
 
     alert(`✨ Lit up star ${nextIndex + 1}! Keep going～`);
+
+    updateProgress();
+
+    if (litStatus.every(s => s === true)) {
+        setTimeout(() => {
+            drawConstellationLines(constellationsData[currentConstellation]);
+        }, 500);
+    }
 }
 
 // ======================= Notes Sidebar =======================
 function initNotesSidebar() {
     const sidebar = document.getElementById('notes-sidebar');
-    const notesBtn = document.getElementById('notes-btn');
-    const closeBtn = document.getElementById('close-sidebar');
+    const openBtn = document.getElementById('open-notes');
+    const closeBtn = document.getElementById('close-notes');
     const saveBtn = document.getElementById('save-note');
-    const noteTextarea = document.getElementById('note-content');
     const starSelect = document.getElementById('star-select');
+    const noteTextarea = document.getElementById('note-textarea');
     const historyList = document.getElementById('history-list');
 
-    if (!sidebar || !notesBtn) return;
-
-    notesBtn.addEventListener('click', () => {
-        sidebar.classList.add('open');
-        populateStarSelect();
-        loadNoteForSelectedStar();
-        loadNotesHistory();
-    });
-
-    if (starSelect) {
-        starSelect.addEventListener('change', loadNoteForSelectedStar);
+    if (openBtn) {
+        openBtn.addEventListener('click', () => sidebar.classList.add('open'));
     }
 
     if (closeBtn) {
@@ -367,13 +394,13 @@ function initNotesSidebar() {
     function loadNoteForSelectedStar() {
         if (!starSelect || !noteTextarea) return;
         const starIndex = parseInt(starSelect.value);
+        let savedNote = '';
         if (starIndex === -1) {
-            const savedNote = getNoteForConstellation(currentConstellation);
-            noteTextarea.value = savedNote;
+            savedNote = getNoteForConstellation(currentConstellation);
         } else {
-            const savedNote = getStarNote(currentConstellation, starIndex);
-            noteTextarea.value = savedNote;
+            savedNote = getStarNote(currentConstellation, starIndex);
         }
+        noteTextarea.value = savedNote;
     }
 
     function loadNotesHistory() {
@@ -382,7 +409,6 @@ function initNotesSidebar() {
         const data = getUserDataForConstellation(currentConstellation);
         if (!data) return;
 
-        // Add global note history
         if (data.notes) {
             const globalNoteItem = document.createElement('div');
             globalNoteItem.className = 'history-item';
@@ -393,7 +419,6 @@ function initNotesSidebar() {
             historyList.appendChild(globalNoteItem);
         }
 
-        // Add star notes history
         if (data.starNotes) {
             data.starNotes.forEach((note, index) => {
                 if (note) {
@@ -408,6 +433,13 @@ function initNotesSidebar() {
             });
         }
     }
+
+    if (starSelect) {
+        starSelect.addEventListener('change', loadNoteForSelectedStar);
+    }
+
+    populateStarSelect();
+    loadNotesHistory();
 }
 
 // ======================= Event Binding =======================
@@ -423,69 +455,81 @@ function bindEvents() {
     const cards = document.querySelectorAll('.constellation-card');
     cards.forEach(card => {
         card.addEventListener('click', () => {
-            const constId = card.dataset.constellation;
-            if (constId) {
-                currentConstellation = constId;
-                loadConstellationData(constId);
+            const constellationId = card.getAttribute('data-constellation');
+            if (constellationId) {
+                currentConstellation = constellationId;
+                loadConstellationData(constellationId);
                 showView('observation-view');
             }
         });
     });
     const checkinBtn = document.getElementById('checkin-btn');
     if (checkinBtn) checkinBtn.addEventListener('click', checkIn);
-
     const shareBtn = document.getElementById('share-btn');
     if (shareBtn) shareBtn.addEventListener('click', generateShareImage);
-
     const certificateBtn = document.getElementById('certificate-btn');
     if (certificateBtn) certificateBtn.addEventListener('click', generateCertificate);
 }
 
-// ======================= 分享功能 =======================
-function generateShareImage() {
-    const starChart = document.getElementById('star-chart');
-    if (!starChart) return;
+// ======================= View Management =======================
+function showView(viewId) {
+    const views = document.querySelectorAll('.view');
+    views.forEach(view => {
+        view.style.display = 'none';
+    });
+    const targetView = document.getElementById(viewId);
+    if (targetView) {
+        targetView.style.display = 'block';
+    }
+}
 
-    // 创建一个分享容器
+// ======================= Share Image Generation =======================
+function generateShareImage() {
     const shareContainer = document.createElement('div');
     shareContainer.style.position = 'absolute';
     shareContainer.style.top = '-9999px';
     shareContainer.style.left = '-9999px';
     shareContainer.style.width = '600px';
-    shareContainer.style.height = '400px';
-    shareContainer.style.background = '#1e1b14';
-    shareContainer.style.border = '2px solid #d4af6a';
-    shareContainer.style.borderRadius = '48px';
-    shareContainer.style.padding = '20px';
+    shareContainer.style.background = '#1a1a12';
+    shareContainer.style.borderRadius = '20px';
+    shareContainer.style.padding = '30px';
     document.body.appendChild(shareContainer);
 
-    // 复制星图内容
-    const starChartCopy = starChart.cloneNode(true);
-    starChartCopy.style.width = '100%';
-    starChartCopy.style.height = '300px';
-    shareContainer.appendChild(starChartCopy);
-
-    // 添加标题
     const title = document.createElement('h2');
-    title.style.textAlign = 'center';
     title.style.color = '#ecd9a3';
-    title.style.marginTop = '10px';
-    title.style.fontSize = '1.5rem';
-    title.textContent = `${constellationsData[currentConstellation].name} - 星光图鉴`;
+    title.style.fontSize = '1.8rem';
+    title.style.textAlign = 'center';
+    title.style.marginBottom = '20px';
+    title.textContent = `${constellationsData[currentConstellation].name} - Starlight Atlas`;
     shareContainer.appendChild(title);
 
-    // 使用html2canvas生成图片
+    const starChart = document.getElementById('star-chart');
+    if (starChart) {
+        const starChartCopy = starChart.cloneNode(true);
+        starChartCopy.style.width = '540px';
+        starChartCopy.style.height = '300px';
+        starChartCopy.style.margin = '0 auto';
+        shareContainer.appendChild(starChartCopy);
+    }
+
+    const progressDiv = document.createElement('div');
+    progressDiv.style.color = '#f0e6c5';
+    progressDiv.style.fontSize = '1rem';
+    progressDiv.style.textAlign = 'center';
+    progressDiv.style.marginTop = '20px';
+    const litCount = litStatus.filter(s => s === true).length;
+    progressDiv.textContent = `Progress: ${litCount}/${litStatus.length} stars lit`;
+    shareContainer.appendChild(progressDiv);
+
     html2canvas(shareContainer, {
         scale: 2,
         useCORS: true
     }).then(canvas => {
-        // Create download link
         const link = document.createElement('a');
         link.download = `${currentConstellation}-star-chart.png`;
         link.href = canvas.toDataURL('image/png');
         link.click();
 
-        // Clean up temporary container
         document.body.removeChild(shareContainer);
 
         alert('Share image generated, please save! 📸');
@@ -496,15 +540,14 @@ function generateShareImage() {
     });
 }
 
+// ======================= Certificate Generation =======================
 function generateCertificate() {
-    // Check if all stars are lit
     const allLit = litStatus.every(status => status === true);
     if (!allLit) {
         alert('Please light up all stars and complete the constellation atlas before generating the certificate!');
         return;
     }
 
-    // Create certificate container
     const certificateContainer = document.createElement('div');
     certificateContainer.style.position = 'absolute';
     certificateContainer.style.top = '-9999px';
@@ -518,7 +561,6 @@ function generateCertificate() {
     certificateContainer.style.textAlign = 'center';
     document.body.appendChild(certificateContainer);
 
-    // Add certificate title
     const title = document.createElement('h1');
     title.style.color = '#ecd9a3';
     title.style.fontSize = '2.5rem';
@@ -527,7 +569,6 @@ function generateCertificate() {
     title.textContent = 'Starlight Atlas Completion Certificate';
     certificateContainer.appendChild(title);
 
-    // Add decorative line
     const line = document.createElement('div');
     line.style.width = '600px';
     line.style.height = '2px';
@@ -535,7 +576,6 @@ function generateCertificate() {
     line.style.margin = '0 auto 30px';
     certificateContainer.appendChild(line);
 
-    // Add certificate content
     const content = document.createElement('div');
     content.style.color = '#f0e6c5';
     content.style.fontSize = '1.2rem';
@@ -548,7 +588,6 @@ function generateCertificate() {
     `;
     certificateContainer.appendChild(content);
 
-    // Add star chart
     const starChart = document.getElementById('star-chart');
     if (starChart) {
         const starChartCopy = starChart.cloneNode(true);
@@ -558,25 +597,21 @@ function generateCertificate() {
         certificateContainer.appendChild(starChartCopy);
     }
 
-    // Add date
     const date = document.createElement('p');
     date.style.color = '#bfa16c';
     date.style.fontSize = '1rem';
     date.textContent = `Date: ${new Date().toLocaleDateString()}`;
     certificateContainer.appendChild(date);
 
-    // Generate certificate image using html2canvas
     html2canvas(certificateContainer, {
         scale: 2,
         useCORS: true
     }).then(canvas => {
-        // Create download link
         const link = document.createElement('a');
         link.download = `${currentConstellation}-certificate.png`;
         link.href = canvas.toDataURL('image/png');
         link.click();
 
-        // Clean up temporary container
         document.body.removeChild(certificateContainer);
 
         alert('Completion certificate generated, please save! 🏆');
@@ -595,8 +630,9 @@ function initAuth() {
     const registerForm = document.getElementById('register-form');
     const loginBtn = document.getElementById('login-btn');
     const registerBtn = document.getElementById('register-btn');
-    const loginMsg = document.getElementById('login-message');
-    const regMsg = document.getElementById('reg-message');
+    const loginMsg = document.getElementById('login-msg');
+    const regMsg = document.getElementById('reg-msg');
+
     if (!loginBtn || !registerBtn) {
         console.error("找不到登录/注册按钮，请检查HTML");
         return;
@@ -613,47 +649,40 @@ function initAuth() {
         registerForm.classList.remove('hidden');
         loginForm.classList.add('hidden');
     });
-    loginBtn.addEventListener('click', () => {
-        const username = document.getElementById('login-username').value.trim();
+    loginBtn.addEventListener('click', async () => {
+        const email = document.getElementById('login-username').value.trim();
         const password = document.getElementById('login-password').value;
 
-        if (!username || !password) {
-            loginMsg.innerText = 'Please enter username and password';
+        if (!email || !password) {
+            loginMsg.innerText = 'Please enter email and password';
             return;
         }
 
-        const result = login(username, password);
+        const result = await login(email, password);
 
         if (result === 'success') {
-            showView('constellation-selector');
-            currentConstellation = 'cygnus';
-            loadConstellationData('cygnus');
-        }
-
-        else {
+            window.location.href = "./index.html";
+        } else {
             loginMsg.innerText = result;
         }
     });
 
-    registerBtn.addEventListener('click', () => {
-        const username = document.getElementById('reg-username').value.trim();
+    registerBtn.addEventListener('click', async () => {
+        const email = document.getElementById('reg-username').value.trim();
         const password = document.getElementById('reg-password').value;
 
-        if (!username || !password) {
-            regMsg.innerText = 'Please enter username and password';
+        if (!email || !password) {
+            regMsg.innerText = 'Please enter email and password';
             return;
         }
 
-        const result = register(username, password);
+        const result = await register(email, password);
 
         if (result === 'success') {
-            regMsg.innerText = 'Registration successful, please login';
-            loginTab.click();
-            document.getElementById('login-username').value = username;
-            document.getElementById('login-password').value = '';
-        }
-
-        else {
+            regMsg.innerText = 'Registration successful! Please check your email for verification.';
+            document.getElementById('reg-username').value = '';
+            document.getElementById('reg-password').value = '';
+        } else {
             regMsg.innerText = result;
         }
     });
@@ -667,14 +696,35 @@ function animateCards() {
     });
 }
 
+// ======================= Page Protection =======================
+async function checkAuthStatus() {
+    const { data, error } = await supabase.auth.getUser();
+
+    if (error) {
+        console.error('Auth check error:', error);
+        return false;
+    }
+
+    if (data.user) {
+        currentUser = data.user.email;
+        localStorage.setItem('starlight_currentUser', data.user.email);
+        return true;
+    }
+
+    window.location.href = "./login.html";
+    return false;
+}
+
 // ======================= Initialization =======================
-// Start
-function init() {
+async function init() {
+    const isAuthenticated = await checkAuthStatus();
+
     initAuth();
     bindEvents();
     initNotesSidebar();
     animateCards();
-    if (checkAutoLogin()) {
+
+    if (isAuthenticated) {
         showView('constellation-selector');
         currentConstellation = 'cygnus';
         loadConstellationData('cygnus');
@@ -683,5 +733,4 @@ function init() {
     }
 }
 
-// 启动
 init();
